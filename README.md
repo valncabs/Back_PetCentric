@@ -1,6 +1,6 @@
 # Pet-Centric — Backend
 
-Plataforma web para la gestión de mascotas perdidas y encontradas. API REST construida con **FastAPI** siguiendo arquitectura por capas (API → Service → Repository → Model), pensada para escalar sin reescribir módulos.
+Plataforma web para la gestión de mascotas perdidas y encontradas. API REST construida con **FastAPI** siguiendo arquitectura por capas (API → Service → Repository → Model).
 
 ## Stack Tecnológico
 
@@ -14,19 +14,6 @@ Plataforma web para la gestión de mascotas perdidas y encontradas. API REST con
 - **Cloudinary** — almacenamiento de imágenes
 - **Mailtrap** (aiosmtplib) — envío de correos (sandbox de pruebas)
 - **Uvicorn** — servidor ASGI
-
-## Arquitectura
-
-app/
-├── api/            # Endpoints REST organizados por módulo (recibe, valida, delega al service)
-├── core/           # Configuración, seguridad, conexión a BD, excepciones globales
-├── models/         # Modelos SQLAlchemy (tablas de la base de datos)
-├── schemas/        # Modelos Pydantic (request/response), un DTO por operación
-├── repositories/   # Acceso a datos (CRUD puro, sin lógica de negocio, sin commit)
-├── services/        # Lógica de negocio, coordina repositories y transacciones
-├── dependencies/   # Dependencias reutilizables de FastAPI (ej. auth JWT)
-├── middlewares/    # Middlewares globales (CORS, logging, etc.)
-└── utils/          # Helpers reutilizables (mailer, validadores, respuesta estándar)
 
 **Reglas de la arquitectura:**
 - Los endpoints **nunca** contienen lógica de negocio: solo reciben, validan y delegan al Service.
@@ -78,10 +65,10 @@ APP_NAME=Pet-Centric
 APP_ENV=development
 
 # Base de datos
-DATABASE_URL=postgresql+asyncpg://usuario:password@localhost:5432/petcentric
+DATABASE_URL=postgresql__url
 
 # JWT
-SECRET_KEY=tu_clave_secreta_super_segura
+SECRET_KEY=tu_clave
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 REFRESH_TOKEN_EXPIRE_DAYS=7

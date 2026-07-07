@@ -40,3 +40,8 @@ Thumbs.db
 
 # Archivos temporales
 *.tmp
+
+# Archivos de documentación local
+DB.txt
+estructura.txt
+tree.txt

@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from datetime import date
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.permissions import require_permission
@@ -31,12 +31,23 @@ async def create_lost_report(
 @router.get("")
 async def list_lost_reports(
     status_filter: LostReportStatus | None = None,
+    species_id: UUID | None = None,
+    city: str | None = None,
     params: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    data = await LostReportService(db).list_reports(params, status_filter)
+    data = await LostReportService(db).list_reports(params, status_filter, species_id, city)
     return success_response(data=data, message="Reportes obtenidos correctamente.")
 
+
+@router.get("/mine")
+async def list_my_lost_reports(
+    params: PaginationParams = Depends(),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    data = await LostReportService(db).list_my_reports(current_user.id, params)
+    return success_response(data=data, message="Tus reportes obtenidos correctamente.")
 
 @router.get("/{report_id}")
 async def get_lost_report(report_id: UUID, db: AsyncSession = Depends(get_db)):
@@ -109,3 +120,40 @@ async def delete_lost_report_image(
     await LostReportService(db)._get_owned_report(report_id, current_user.id)
     await ImageService(db).delete(image_id, ImageEntityType.LOST_REPORT, report_id)
     return success_response(message="Imagen eliminada correctamente.")
+
+@router.delete("/{report_id}")
+async def delete_lost_report(
+    report_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await LostReportService(db).delete_report(report_id, current_user.id)
+    return success_response(message="Reporte eliminado correctamente.")
+
+@router.get("")
+async def list_lost_reports(
+    status_filter: LostReportStatus | None = None,
+    species_id: UUID | None = None,
+    city: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    params: PaginationParams = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    data = await LostReportService(db).list_reports(
+        params, status_filter, species_id, city, date_from=date_from, date_to=date_to
+    )
+    return success_response(data=data, message="Reportes obtenidos correctamente.")
+
+
+# nuevas rutas admin, al final del archivo:
+@router.post("/{report_id}/admin-close", dependencies=[Depends(require_permission("lost_reports.admin_manage"))])
+async def admin_close_lost_report(report_id: UUID, db: AsyncSession = Depends(get_db)):
+    data = await LostReportService(db).admin_close_report(report_id)
+    return success_response(data=data, message="Reporte cerrado por administrador.")
+
+
+@router.delete("/{report_id}/admin-delete", dependencies=[Depends(require_permission("lost_reports.admin_manage"))])
+async def admin_delete_lost_report(report_id: UUID, db: AsyncSession = Depends(get_db)):
+    await LostReportService(db).admin_delete_report(report_id)
+    return success_response(message="Reporte eliminado por administrador.")

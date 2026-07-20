@@ -9,7 +9,7 @@ class EmailService:
 
     @staticmethod
     def send_verification_email(background_tasks: BackgroundTasks, to_email: str, raw_token: str) -> None:
-        link = f"{settings.FRONTEND_URL}/auth/verify-email?token={raw_token}"
+        link = f"{settings.FRONTEND_URL}/verify-email?token={raw_token}"
         html = (
             "<p>Bienvenido a Pet-Centric.</p>"
             f"<p>Confirma tu correo: <a href='{link}'>Verificar correo</a></p>"
@@ -19,7 +19,7 @@ class EmailService:
 
     @staticmethod
     def send_password_reset_email(background_tasks: BackgroundTasks, to_email: str, raw_token: str) -> None:
-        link = f"{settings.FRONTEND_URL}/auth/reset-password?token={raw_token}"
+        link = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
         html = (
             "<p>Solicitaste restablecer tu contraseña.</p>"
             f"<p><a href='{link}'>Restablecer contraseña</a></p>"

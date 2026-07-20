@@ -7,6 +7,8 @@ from app.models.enums import FoundReportStatus
 class FoundReportResponse(BaseModel):
     id: str
     created_by: str
+    species_id: str | None = None
+    lost_report_id: str | None = None
     title: str
     description: str | None = None
     status: FoundReportStatus
@@ -24,6 +26,8 @@ class FoundReportResponse(BaseModel):
 
 class FoundReportListItem(BaseModel):
     id: str
+    created_by: str
+    species_id: str | None = None
     title: str
     status: FoundReportStatus
     city: str

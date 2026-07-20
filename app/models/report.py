@@ -14,9 +14,8 @@ from app.models.enums import FoundReportStatus, LostReportStatus
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.pet import Pet
+    from app.models.pet import Pet, Species
     from app.models.user import User
-
 
 class LostReport(Base):
     __tablename__ = "lost_reports"
@@ -75,13 +74,18 @@ class FoundReport(Base):
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(11, 8), nullable=True)
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    owner_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    species_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("species.id"), nullable=True)
+    lost_report_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("lost_reports.id"), nullable=True)
 
+    species: Mapped["Species | None"] = relationship("Species")
+    lost_report: Mapped["LostReport | None"] = relationship("LostReport")
     reporter: Mapped["User"] = relationship(
         "User", foreign_keys=[created_by], back_populates="found_reports"
     )

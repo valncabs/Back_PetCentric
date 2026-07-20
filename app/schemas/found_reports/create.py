@@ -3,6 +3,8 @@ from pydantic import BaseModel, field_validator
 
 
 class CreateFoundReportRequest(BaseModel):
+    species_id: str
+    lost_report_id: str | None = None
     title: str
     description: str | None = None
     found_date: date

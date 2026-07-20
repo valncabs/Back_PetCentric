@@ -1,0 +1,201 @@
+app
+├── api
+│   ├── auth
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
+│   ├── catalog
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
+│   ├── found_reports
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
+│   ├── lost_reports
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
+│   ├── pets
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
+│   ├── profile
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
+│   ├── __pycache__
+│   │   └── auth.cpython-313.pyc
+│   └── rbac
+│       ├── __pycache__
+│       │   └── router.cpython-313.pyc
+│       └── router.py
+├── core
+│   ├── config.py
+│   ├── database.py
+│   ├── exception_handlers.py
+│   ├── exceptions.py
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── config.cpython-313.pyc
+│   │   ├── database.cpython-313.pyc
+│   │   ├── exception_handlers.cpython-313.pyc
+│   │   ├── exceptions.cpython-313.pyc
+│   │   ├── __init__.cpython-313.pyc
+│   │   └── security.cpython-313.pyc
+│   └── security.py
+├── dependencies
+│   ├── auth.py
+│   ├── permissions.py
+│   └── __pycache__
+│       ├── auth.cpython-313.pyc
+│       └── permissions.cpython-313.pyc
+├── __init__.py
+├── main.py
+├── middlewares
+├── models
+│   ├── audit.py
+│   ├── auth.py
+│   ├── communication.py
+│   ├── email_verification_token.py
+│   ├── enums.py
+│   ├── image.py
+│   ├── __init__.py
+│   ├── password_reset_token.py
+│   ├── pet.py
+│   ├── __pycache__
+│   │   ├── audit.cpython-313.pyc
+│   │   ├── auth.cpython-313.pyc
+│   │   ├── communication.cpython-313.pyc
+│   │   ├── email_verification_token.cpython-313.pyc
+│   │   ├── enums.cpython-313.pyc
+│   │   ├── image.cpython-313.pyc
+│   │   ├── __init__.cpython-313.pyc
+│   │   ├── password_reset_token.cpython-313.pyc
+│   │   ├── pet.cpython-313.pyc
+│   │   ├── refresh_token.cpython-313.pyc
+│   │   ├── report.cpython-313.pyc
+│   │   └── user.cpython-313.pyc
+│   ├── refresh_token.py
+│   ├── report.py
+│   └── user.py
+├── __pycache__
+│   ├── __init__.cpython-313.pyc
+│   └── main.cpython-313.pyc
+├── repositories
+│   ├── email_verification_repository.py
+│   ├── found_report_repository.py
+│   ├── image_repository.py
+│   ├── lost_report_repository.py
+│   ├── notification_repository.py
+│   ├── password_reset_repository.py
+│   ├── permission_repository.py
+│   ├── pet_repository.py
+│   ├── __pycache__
+│   │   ├── email_verification_repository.cpython-313.pyc
+│   │   ├── found_report_repository.cpython-313.pyc
+│   │   ├── image_repository.cpython-313.pyc
+│   │   ├── lost_report_repository.cpython-313.pyc
+│   │   ├── notification_repository.cpython-313.pyc
+│   │   ├── password_reset_repository.cpython-313.pyc
+│   │   ├── permission_repository.cpython-313.pyc
+│   │   ├── pet_repository.cpython-313.pyc
+│   │   ├── refresh_token_repository.cpython-313.pyc
+│   │   ├── rol_repository.cpython-313.pyc
+│   │   ├── species_repository.cpython-313.pyc
+│   │   ├── user.cpython-313.pyc
+│   │   ├── user_profile_repository.cpython-313.pyc
+│   │   └── user_rol_repository.cpython-313.pyc
+│   ├── refresh_token_repository.py
+│   ├── rol_repository.py
+│   ├── species_repository.py
+│   ├── user_profile_repository.py
+│   ├── user.py
+│   └── user_rol_repository.py
+├── schemas
+│   ├── auth
+│   │   ├── login.py
+│   │   ├── password.py
+│   │   ├── __pycache__
+│   │   │   ├── login.cpython-313.pyc
+│   │   │   ├── password.cpython-313.pyc
+│   │   │   ├── register.cpython-313.pyc
+│   │   │   ├── token.cpython-313.pyc
+│   │   │   └── verify_email.cpython-313.pyc
+│   │   ├── register.py
+│   │   ├── token.py
+│   │   └── verify_email.py
+│   ├── catalog
+│   │   └── species.py
+│   ├── found_reports
+│   │   ├── create.py
+│   │   ├── __pycache__
+│   │   │   ├── create.cpython-313.pyc
+│   │   │   └── update.cpython-313.pyc
+│   │   ├── response.py
+│   │   └── update.py
+│   ├── lost_reports
+│   │   ├── create.py
+│   │   ├── __pycache__
+│   │   │   ├── create.cpython-313.pyc
+│   │   │   └── update.cpython-313.pyc
+│   │   ├── response.py
+│   │   └── update.py
+│   ├── pets
+│   │   ├── create_pet.py
+│   │   ├── list_pets.py
+│   │   ├── __pycache__
+│   │   │   ├── create_pet.cpython-313.pyc
+│   │   │   └── update_pet.cpython-313.pyc
+│   │   └── update_pet.py
+│   ├── profile
+│   │   ├── create_profile.py
+│   │   ├── get_profile.py
+│   │   ├── __pycache__
+│   │   │   ├── create_profile.cpython-313.pyc
+│   │   │   ├── get_profile.cpython-313.pyc
+│   │   │   └── update_profile.cpython-313.pyc
+│   │   └── update_profile.py
+│   ├── __pycache__
+│   │   └── auth.cpython-313.pyc
+│   └── rbac
+│       └── me.py
+├── scripts
+├── services
+│   ├── auth.py
+│   ├── catalog_service.py
+│   ├── email.py
+│   ├── found_report_service.py
+│   ├── image_service.py
+│   ├── __init__.py
+│   ├── lost_report_service.py
+│   ├── pet_service.py
+│   ├── profile_service.py
+│   ├── __pycache__
+│   │   ├── auth.cpython-313.pyc
+│   │   ├── catalog_service.cpython-313.pyc
+│   │   ├── email.cpython-313.pyc
+│   │   ├── found_report_service.cpython-313.pyc
+│   │   ├── image_service.cpython-313.pyc
+│   │   ├── __init__.cpython-313.pyc
+│   │   ├── lost_report_service.cpython-313.pyc
+│   │   ├── pet_service.cpython-313.pyc
+│   │   ├── profile_service.cpython-313.pyc
+│   │   └── rbac_service.cpython-313.pyc
+│   └── rbac_service.py
+└── utils
+    ├── cloudinary_client.py
+    ├── mailer.py
+    ├── pagination.py
+    ├── __pycache__
+    │   ├── cloudinary_client.cpython-313.pyc
+    │   ├── email_brevo.cpython-313.pyc
+    │   ├── email_mailtrap.cpython-313.pyc
+    │   ├── mailer.cpython-313.pyc
+    │   ├── pagination.cpython-313.pyc
+    │   ├── response.cpython-313.pyc
+    │   └── validators.cpython-313.pyc
+    ├── response.py
+    └── validators.py
+
+46 directories, 153 files

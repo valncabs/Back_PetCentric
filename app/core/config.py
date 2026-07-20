@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     MAILTRAP_SENDER_NAME: str = "Pet-Centric"
 
     # Frontend
-    FRONTEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:4200"
 
     model_config = SettingsConfigDict(
         env_file=".env",

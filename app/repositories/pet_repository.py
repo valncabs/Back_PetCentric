@@ -74,3 +74,13 @@ class PetRepository:
         pet.deleted_at = datetime.now(timezone.utc)
         pet.is_active = False
         await self.db.flush()
+    
+    async def get_by_id_ignoring_owner(self, pet_id: UUID) -> Pet | None:
+        """Lee una mascota sin filtrar por dueño. Uso exclusivo para exponer
+        datos públicos y seguros (nombre, especie, etc.) desde un reporte
+        público como lost_reports — nunca para operaciones de escritura ni
+        para exponer campos sensibles como microchip_number."""
+        result = await self.db.execute(
+            select(Pet).where(Pet.id == pet_id, Pet.deleted_at.is_(None))
+        )
+        return result.scalar_one_or_none()

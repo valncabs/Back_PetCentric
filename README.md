@@ -73,6 +73,6 @@ La documentación interactiva queda disponible en:
 - [x] RBAC — dependencia
 - [x] Gestión de mascotas
 - [x] Reportes de mascotas perdidas/encontradas
-- [ ] Notificaciones
-- [ ] Mensajería
-- [ ] Panel de administración
+- [] Notificaciones
+- [] Mensajería
+- [x] Panel de administración

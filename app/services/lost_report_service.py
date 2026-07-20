@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import UUID
 from typing import Any
 
@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.models.enums import LostReportStatus
 from app.models.report import LostReport
+from app.models.pet import Pet
 from app.repositories.lost_report_repository import LostReportRepository
 from app.repositories.pet_repository import PetRepository
 from app.utils.pagination import PaginationParams, paginate
@@ -28,24 +29,67 @@ class LostReportService:
 
         report = await self.report_repo.create(user_id, data)
         await self.db.commit()
-        return self._to_dict(report)
+        return await self._to_dict_with_pet(report)
 
     async def get_report(self, report_id: UUID) -> dict:
         report = await self.report_repo.get_by_id(report_id)
         if report is None:
             raise NotFoundException("Reporte no encontrado.")
-        return self._to_dict(report)
+        return await self._to_dict_with_pet(report)
 
-    async def list_reports(self, params: PaginationParams, status: LostReportStatus | None = None) -> dict:
-        stmt = self.report_repo.base_query(params.search, status, params.sort, params.order)
+    async def list_reports(
+    self,
+    params: PaginationParams,
+    status: LostReportStatus | None = None,
+    species_id: UUID | None = None,
+    city: str | None = None,
+    created_by: UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    ) -> dict:
+        stmt = self.report_repo.base_query(
+            params.search, status, species_id, city, created_by, date_from, date_to, params.sort, params.order
+        )
         return await paginate(self.db, stmt, params, self._to_list_item)
+
+    # agregar nuevo método, junto a close_report:
+    async def admin_close_report(self, report_id: UUID) -> dict:
+        """Cierre por parte de un admin, sin exigir ownership. Protegido en el
+        router con require_permission('lost_reports.admin_manage')."""
+        report = await self.report_repo.get_by_id(report_id)
+        if report is None:
+            raise NotFoundException("Reporte no encontrado.")
+        if report.status == LostReportStatus.CLOSED:
+            raise BadRequestException("El reporte ya está cerrado.")
+
+        report.status = LostReportStatus.CLOSED
+        report.closed_at = datetime.now(timezone.utc)
+        await self.db.commit()
+        await self.db.refresh(report)
+        return await self._to_dict_with_pet(report)
+
+    async def admin_delete_report(self, report_id: UUID) -> None:
+        """Eliminación por parte de un admin, sin exigir ownership."""
+        report = await self.report_repo.get_by_id(report_id)
+        if report is None:
+            raise NotFoundException("Reporte no encontrado.")
+        await self.report_repo.soft_delete(report)
+        await self.db.commit()
+        
+    async def list_my_reports(self, user_id: UUID, params: PaginationParams) -> dict:
+        return await self.list_reports(params, created_by=user_id)
 
     async def update_report(self, report_id: UUID, user_id: UUID, data: dict[str, Any]) -> dict:
         report = await self._get_owned_editable_report(report_id, user_id)
         update_data = {field: value for field, value in data.items() if value is not None}
         report = await self.report_repo.update(report, update_data)
         await self.db.commit()
-        return self._to_dict(report)
+        return await self._to_dict_with_pet(report)
+
+    async def delete_report(self, report_id: UUID, user_id: UUID) -> None:
+        report = await self._get_owned_report(report_id, user_id)
+        await self.report_repo.soft_delete(report)
+        await self.db.commit()
 
     async def mark_as_found(self, report_id: UUID, user_id: UUID) -> dict:
         report = await self._get_owned_report(report_id, user_id)
@@ -55,7 +99,7 @@ class LostReportService:
         report.status = LostReportStatus.FOUND
         await self.db.commit()
         await self.db.refresh(report)
-        return self._to_dict(report)
+        return await self._to_dict_with_pet(report)
 
     async def close_report(self, report_id: UUID, user_id: UUID) -> dict:
         report = await self._get_owned_report(report_id, user_id)
@@ -66,9 +110,7 @@ class LostReportService:
         report.closed_at = datetime.now(timezone.utc)
         await self.db.commit()
         await self.db.refresh(report)
-        return self._to_dict(report)
-
-    # ---------- Helpers internos ----------
+        return await self._to_dict_with_pet(report)
 
     async def _get_owned_report(self, report_id: UUID, user_id: UUID) -> LostReport:
         report = await self.report_repo.get_by_id(report_id)
@@ -84,8 +126,12 @@ class LostReportService:
             raise BadRequestException("Solo se puede editar un reporte mientras está publicado.")
         return report
 
+    async def _to_dict_with_pet(self, report: LostReport) -> dict:
+        pet = await self.pet_repo.get_by_id_ignoring_owner(report.pet_id)
+        return self._to_dict(report, pet)
+
     @staticmethod
-    def _to_dict(report: LostReport) -> dict:
+    def _to_dict(report: LostReport, pet: Pet | None) -> dict:
         return {
             "id": str(report.id),
             "pet_id": str(report.pet_id),
@@ -104,6 +150,14 @@ class LostReportService:
             "longitude": report.longitude,
             "published_at": report.published_at,
             "closed_at": report.closed_at,
+            "pet_name": pet.name if pet else "",
+            "pet_species_id": str(pet.species_id) if pet else "",
+            "pet_breed_id": str(pet.breed_id) if pet and pet.breed_id else None,
+            "pet_sex": pet.sex if pet else "",
+            "pet_color": pet.color if pet else "",
+            "pet_size": pet.size if pet else "",
+            "pet_approximate_age": pet.approximate_age if pet else None,
+            "pet_distinctive_marks": pet.distinctive_marks if pet else None,
         }
 
     @staticmethod
@@ -111,6 +165,7 @@ class LostReportService:
         return {
             "id": str(report.id),
             "pet_id": str(report.pet_id),
+            "created_by": str(report.created_by),
             "title": report.title,
             "status": report.status,
             "city": report.city,

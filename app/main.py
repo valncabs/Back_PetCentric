@@ -12,6 +12,8 @@ from app.api.catalog.router import router as catalog_router
 from app.api.rbac.router import router as rbac_router
 from app.api.lost_reports.router import router as lost_reports_router
 from app.api.found_reports.router import router as found_reports_router
+from app.api.admin_users.router import router as admin_users_router
+from app.api.admin_reports.router import router as admin_reports_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -41,3 +43,5 @@ app.include_router(catalog_router)
 app.include_router(rbac_router)
 app.include_router(lost_reports_router)
 app.include_router(found_reports_router)
+app.include_router(admin_users_router)
+app.include_router(admin_reports_router)

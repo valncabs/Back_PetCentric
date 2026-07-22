@@ -11,15 +11,15 @@ class Settings(BaseSettings):
 
     # JWT
     SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    EMAIL_VERIFICATION_EXPIRE_MINUTES: int = 1440  # 24 horas
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    EMAIL_VERIFICATION_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_DAYS: int
     # Reset de contraseña
-    PASSWORD_RESET_EXPIRE_MINUTES: int = 30
+    PASSWORD_RESET_EXPIRE_MINUTES: int
 
     # Cooldown para reenviar verificación
-    RESEND_VERIFICATION_COOLDOWN_SECONDS: int = 60  
+    RESEND_VERIFICATION_COOLDOWN_SECONDS: int
 
     # Cloudinary
     CLOUDINARY_CLOUD_NAME: str
@@ -27,15 +27,15 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str
 
     # Mailtrap
-    MAILTRAP_HOST: str = "sandbox.smtp.mailtrap.io"
-    MAILTRAP_PORT: int = 2525
+    MAILTRAP_HOST: str
+    MAILTRAP_PORT: int
     MAILTRAP_USERNAME: str
     MAILTRAP_PASSWORD: str
-    MAILTRAP_SENDER_EMAIL: str = "noreply@pet-centric.com"
-    MAILTRAP_SENDER_NAME: str = "Pet-Centric"
+    MAILTRAP_SENDER_EMAIL: str
+    MAILTRAP_SENDER_NAME: str
 
     # Frontend
-    FRONTEND_URL: str = "http://localhost:4200"
+    FRONTEND_URL: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

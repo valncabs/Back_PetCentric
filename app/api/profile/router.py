@@ -37,5 +37,7 @@ async def update_my_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    data = await ProfileService(db).update_profile(current_user.id, payload.model_dump())
+   
+    changes = payload.model_dump(exclude_unset=True)
+    data = await ProfileService(db).update_profile(current_user.id, changes)
     return success_response(data=data, message="Perfil actualizado correctamente.")

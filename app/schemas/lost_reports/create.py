@@ -28,6 +28,19 @@ class CreateLostReportRequest(BaseModel):
     @field_validator("reward")
     @classmethod
     def check_reward(cls, value: Decimal | None) -> Decimal | None:
-        if value is not None and value < 0:
+        if value is None:
+            return value
+        if value < 0:
             raise ValueError("La recompensa no puede ser negativa.")
+        if value > Decimal("99999999.99"):
+            raise ValueError("La recompensa no puede superar los $99.999.999.")
+        if value.as_tuple().exponent < -2:
+            raise ValueError("La recompensa admite máximo 2 decimales.")
+        return value
+
+    @field_validator("lost_date")
+    @classmethod
+    def check_lost_date(cls, value: date) -> date:
+        if value > date.today():
+            raise ValueError("La fecha de pérdida no puede ser en el futuro.")
         return value

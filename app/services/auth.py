@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.core.config import settings
 from app.core.exceptions import BadRequestException, ConflictException, NotFoundException, UnauthorizedException
@@ -102,6 +103,8 @@ class AuthService:
         refresh_expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         await self.refresh_token_repo.create(user.id, refresh_hash, refresh_expires_at, user_agent, ip_address)
 
+        profile_completed = await self.user_profile_repo.exists_for_user(user.id)
+
         await self.db.commit()
 
         roles = [ur.role.name for ur in user.user_roles]
@@ -115,9 +118,9 @@ class AuthService:
                 "email": user.email,
                 "email_verified": user.email_verified,
                 "roles": roles,
+                "profile_completed": profile_completed,
             },
         }
-
     # ---------- Renovar token ----------
     async def refresh_token(self, raw_refresh_token: str) -> dict:
         token_hash = hash_opaque_token(raw_refresh_token)
@@ -193,4 +196,38 @@ class AuthService:
             )
 
         await self.user_repo.update_password(user, hash_password(new_password))
+        await self.db.commit()
+
+    # ---------- Sesión actual (rehidratación tras F5) ----------
+    async def me(self, user: User) -> dict:
+        """
+        Devuelve el estado de sesión actual (roles + profile_completed)
+        recalculado desde la BD. Pensado para usarse UNA vez al montar el
+        shell del dashboard, no en cada navegación.
+        """
+        user_with_roles = await self.user_repo.get_by_email_with_roles(user.email)
+        roles = [ur.role.name for ur in user_with_roles.user_roles]
+        profile_completed = await self.user_profile_repo.exists_for_user(user.id)
+
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "email_verified": user.email_verified,
+            "roles": roles,
+            "profile_completed": profile_completed,
+        }
+
+    # ---------- Eliminar cuenta (self-service) ----------
+    async def delete_account(self, user_id: UUID, password: str) -> None:
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None:
+            raise NotFoundException("Usuario no encontrado.")
+
+        if not verify_password(password, user.password_hash):
+            raise BadRequestException(
+                "La contraseña es incorrecta.",
+                errors={"password": ["Contraseña incorrecta."]},
+            )
+
+        await self.user_repo.soft_delete(user)
         await self.db.commit()

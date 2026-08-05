@@ -97,7 +97,9 @@ class PetService:
             "id": str(pet.id),
             "owner_user_id": str(pet.owner_user_id),
             "species_id": str(pet.species_id),
+            "species_name": pet.species.name,
             "breed_id": str(pet.breed_id) if pet.breed_id else None,
+            "breed_name": pet.breed.name if pet.breed else None,
             "name": pet.name,
             "sex": pet.sex,
             "color": pet.color,
@@ -109,17 +111,22 @@ class PetService:
             "distinctive_marks": pet.distinctive_marks,
             "description": pet.description,
             "is_active": pet.is_active,
+            "primary_image_url": pet.primary_image.file_path if pet.primary_image else None,
         }
+
 
     @staticmethod
     def _to_list_item(pet: Pet) -> dict:
         return {
             "id": str(pet.id),
             "species_id": str(pet.species_id),
+            "species_name": pet.species.name,
             "breed_id": str(pet.breed_id) if pet.breed_id else None,
+            "breed_name": pet.breed.name if pet.breed else None,
             "name": pet.name,
             "sex": pet.sex,
             "color": pet.color,
             "size": pet.size,
             "is_active": pet.is_active,
+            "primary_image_url": pet.primary_image.file_path if pet.primary_image else None,
         }

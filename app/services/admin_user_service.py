@@ -149,3 +149,11 @@ class AdminUserService:
                 else None
             ),
         }
+
+    async def delete_user(self, user_id: UUID) -> None:
+        user = await self.user_repo.get_by_id(user_id)
+        if user is None:
+            raise NotFoundException("Usuario no encontrado.")
+
+        await self.user_repo.soft_delete(user)
+        await self.db.commit()

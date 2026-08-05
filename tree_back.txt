@@ -1,5 +1,13 @@
 app
 ├── api
+│   ├── admin_reports
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
+│   ├── admin_users
+│   │   ├── __pycache__
+│   │   │   └── router.cpython-313.pyc
+│   │   └── router.py
 │   ├── auth
 │   │   ├── __pycache__
 │   │   │   └── router.cpython-313.pyc
@@ -47,9 +55,11 @@ app
 ├── dependencies
 │   ├── auth.py
 │   ├── permissions.py
+│   ├── profile.py
 │   └── __pycache__
 │       ├── auth.cpython-313.pyc
-│       └── permissions.cpython-313.pyc
+│       ├── permissions.cpython-313.pyc
+│       └── profile.cpython-313.pyc
 ├── __init__.py
 ├── main.py
 ├── middlewares
@@ -113,11 +123,27 @@ app
 │   ├── user.py
 │   └── user_rol_repository.py
 ├── schemas
+│   ├── admin
+│   │   ├── create_admin.py
+│   │   ├── detail.py
+│   │   ├── __init__.py
+│   │   ├── list_item.py
+│   │   ├── __pycache__
+│   │   │   ├── create_admin.cpython-313.pyc
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── update_role.cpython-313.pyc
+│   │   │   └── update_status.cpython-313.pyc
+│   │   ├── update_role.py
+│   │   └── update_status.py
 │   ├── auth
+│   │   ├── delete_account.py
 │   │   ├── login.py
+│   │   ├── me.py
 │   │   ├── password.py
 │   │   ├── __pycache__
+│   │   │   ├── delete_account.cpython-313.pyc
 │   │   │   ├── login.cpython-313.pyc
+│   │   │   ├── me.cpython-313.pyc
 │   │   │   ├── password.cpython-313.pyc
 │   │   │   ├── register.cpython-313.pyc
 │   │   │   ├── token.cpython-313.pyc
@@ -162,6 +188,8 @@ app
 │       └── me.py
 ├── scripts
 ├── services
+│   ├── admin_report_service.py
+│   ├── admin_user_service.py
 │   ├── auth.py
 │   ├── catalog_service.py
 │   ├── email.py
@@ -172,6 +200,8 @@ app
 │   ├── pet_service.py
 │   ├── profile_service.py
 │   ├── __pycache__
+│   │   ├── admin_report_service.cpython-313.pyc
+│   │   ├── admin_user_service.cpython-313.pyc
 │   │   ├── auth.cpython-313.pyc
 │   │   ├── catalog_service.cpython-313.pyc
 │   │   ├── email.cpython-313.pyc
@@ -198,4 +228,4 @@ app
     ├── response.py
     └── validators.py
 
-46 directories, 153 files
+52 directories, 177 files

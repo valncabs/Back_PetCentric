@@ -27,6 +27,20 @@ class LostReportRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_active_by_pet(self, pet_id: UUID) -> LostReport | None:
+        """Reporte de pérdida activo (PUBLISHED, no eliminado) para una mascota.
+        Mientras exista, no se puede volver a reportar la mascota como perdida."""
+        result = await self.db.execute(
+            select(LostReport)
+            .where(
+                LostReport.pet_id == pet_id,
+                LostReport.deleted_at.is_(None),
+                LostReport.status == LostReportStatus.PUBLISHED,
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     def base_query(
         self,
         search: str | None = None,

@@ -98,6 +98,7 @@ class AdminReportService:
             "city": report.city,
             "date": report.lost_date,
             "published_at": report.published_at,
+            "found_requested_at": report.found_requested_at,
         }
 
     @staticmethod

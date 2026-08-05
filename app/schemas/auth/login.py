@@ -11,6 +11,7 @@ class LoginUserData(BaseModel):
     email: str
     email_verified: bool
     roles: list[str] = []
+    profile_completed: bool = False
 
 
 class LoginResponse(BaseModel):

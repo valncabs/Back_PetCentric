@@ -1,7 +1,7 @@
 from uuid import UUID
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import UserProfile
@@ -18,6 +18,16 @@ class UserProfileRepository:
             select(UserProfile).where(UserProfile.user_id == user_id)
         )
         return result.scalar_one_or_none()
+
+    async def exists_for_user(self, user_id: UUID) -> bool:
+        """
+        Verificación mínima de existencia (sin cargar la entidad completa).
+        Usada por `require_completed_profile` en cada request protegido:
+        debe ser lo más barata posible.
+        """
+        stmt = select(exists().where(UserProfile.user_id == user_id))
+        result = await self.db.execute(stmt)
+        return bool(result.scalar())
 
     async def exists_by_document_number(self, document_number: str, exclude_user_id: UUID | None = None) -> bool:
         stmt = select(UserProfile).where(UserProfile.document_number == document_number)

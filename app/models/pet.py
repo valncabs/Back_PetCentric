@@ -82,3 +82,10 @@ class Pet(Base):
         foreign_keys="Image.entity_id",
         viewonly=True,
     )
+    primary_image: Mapped["Image | None"] = relationship(
+        "Image",
+        primaryjoin="and_(Image.entity_id == Pet.id, Image.entity_type == 'PET', Image.is_primary == True)",
+        foreign_keys="Image.entity_id",
+        viewonly=True,
+        uselist=False,
+    )

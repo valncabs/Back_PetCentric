@@ -23,3 +23,10 @@ class CreateFoundReportRequest(BaseModel):
         if not value:
             raise ValueError("Este campo no puede estar vacío.")
         return value
+
+    @field_validator("found_date")
+    @classmethod
+    def check_found_date(cls, value: date) -> date:
+        if value > date.today():
+            raise ValueError("La fecha de encuentro no puede ser en el futuro.")
+        return value

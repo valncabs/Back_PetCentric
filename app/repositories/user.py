@@ -113,3 +113,8 @@ class UserRepository:
     async def set_active(self, user: User, is_active: bool) -> None:
         user.is_active = is_active
         await self.db.flush()
+
+    async def soft_delete(self, user: User) -> None:
+        user.deleted_at = datetime.now(timezone.utc)
+        user.is_active = False
+        await self.db.flush()

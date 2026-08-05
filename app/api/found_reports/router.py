@@ -6,6 +6,7 @@ from datetime import date
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.permissions import require_permission
+from app.dependencies.profile import require_completed_profile
 from app.models.enums import FoundReportStatus, ImageEntityType
 from app.models.user import User
 from app.schemas.found_reports.create import CreateFoundReportRequest
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/found-reports", tags=["Found Reports"])
 @router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("found_reports.create"))])
 async def create_found_report(
     payload: CreateFoundReportRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     data = await FoundReportService(db).create_report(current_user.id, payload.model_dump())
@@ -38,25 +39,28 @@ async def list_my_found_reports(
     return success_response(data=data, message="Tus reportes obtenidos correctamente.")
 
 
+# Ruta única de listado público (fusionadas las dos versiones duplicadas
+# de GET "" — la segunda, con date_from/date_to, nunca se ejecutaba).
 @router.get("")
 async def list_found_reports(
     status_filter: FoundReportStatus | None = None,
     species_id: UUID | None = None,
     city: str | None = None,
     lost_report_id: UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     params: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     data = await FoundReportService(db).list_reports(
-        params, status_filter, species_id, city, lost_report_id=lost_report_id
+        params, status_filter, species_id, city, lost_report_id=lost_report_id,
+        date_from=date_from, date_to=date_to,
     )
     return success_response(data=data, message="Reportes obtenidos correctamente.")
 
 
 @router.get("/by-lost-report/{lost_report_id}")
 async def list_sightings_for_lost_report(lost_report_id: UUID, db: AsyncSession = Depends(get_db)):
-    """Todos los avistamientos asociados a un reporte de pérdida, sin
-    paginar (se usa en el detalle de 'Mis reportes')."""
     data = await FoundReportService(db).list_by_lost_report(lost_report_id)
     return success_response(data=data, message="Avistamientos obtenidos correctamente.")
 
@@ -72,7 +76,7 @@ async def get_found_report(report_id: UUID, db: AsyncSession = Depends(get_db)):
 @router.post("/{report_id}/match")
 async def match_found_report(
     report_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     data = await FoundReportService(db).match_report(report_id, current_user.id)
@@ -82,7 +86,7 @@ async def match_found_report(
 @router.post("/{report_id}/unmatch")
 async def unmatch_found_report(
     report_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     data = await FoundReportService(db).unmatch_report(report_id, current_user.id)
@@ -92,7 +96,7 @@ async def unmatch_found_report(
 @router.post("/{report_id}/confirm-found")
 async def confirm_found_report(
     report_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     data = await FoundReportService(db).confirm_found(report_id, current_user.id)
@@ -138,7 +142,7 @@ async def upload_found_report_image(
     report_id: UUID,
     file: UploadFile = File(...),
     is_primary: bool = False,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     await FoundReportService(db).verify_ownership(report_id, current_user.id)
@@ -158,18 +162,19 @@ async def list_found_report_images(report_id: UUID, db: AsyncSession = Depends(g
 async def delete_found_report_image(
     report_id: UUID,
     image_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     await FoundReportService(db).verify_ownership(report_id, current_user.id)
     await ImageService(db).delete(image_id, ImageEntityType.FOUND_REPORT, report_id)
     return success_response(message="Imagen eliminada correctamente.")
 
+
 @router.patch("/{report_id}")
 async def update_found_report(
     report_id: UUID,
     payload: UpdateFoundReportRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     data = await FoundReportService(db).update_report(report_id, current_user.id, payload.model_dump())
@@ -179,31 +184,15 @@ async def update_found_report(
 @router.delete("/{report_id}")
 async def delete_found_report(
     report_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_completed_profile),
     db: AsyncSession = Depends(get_db),
 ):
     await FoundReportService(db).delete_report(report_id, current_user.id)
     return success_response(message="Reporte eliminado correctamente.")
 
-@router.get("")
-async def list_found_reports(
-    status_filter: FoundReportStatus | None = None,
-    species_id: UUID | None = None,
-    city: str | None = None,
-    lost_report_id: UUID | None = None,
-    date_from: date | None = None,
-    date_to: date | None = None,
-    params: PaginationParams = Depends(),
-    db: AsyncSession = Depends(get_db),
-):
-    data = await FoundReportService(db).list_reports(
-        params, status_filter, species_id, city, lost_report_id=lost_report_id,
-        date_from=date_from, date_to=date_to
-    )
-    return success_response(data=data, message="Reportes obtenidos correctamente.")
 
+# ---------- Rutas de administración ----------
 
-# nuevas rutas admin, al final del archivo:
 @router.post("/{report_id}/admin-close", dependencies=[Depends(require_permission("found_reports.admin_manage"))])
 async def admin_close_found_report(report_id: UUID, db: AsyncSession = Depends(get_db)):
     data = await FoundReportService(db).admin_close_report(report_id)

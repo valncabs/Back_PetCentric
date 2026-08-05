@@ -87,10 +87,11 @@ class FoundReportRepository:
         await self.db.refresh(report)
         return report
 
-    async def bulk_reject_others(self, lost_report_id: UUID, keep_report_id: UUID) -> None:
+    async def bulk_reject_others(self, lost_report_id: UUID, keep_report_id: UUID) -> list[FoundReport]:
         """Al aprobar un avistamiento como definitivo, todos los demás
         avistamientos activos del mismo reporte de pérdida se rechazan:
-        la mascota ya apareció, no tiene sentido seguir revisando candidatos."""
+        la mascota ya apareció, no tiene sentido seguir revisando candidatos.
+        Devuelve los reportes rechazados para poder notificar a sus autores."""
         result = await self.db.execute(
             select(FoundReport).where(
                 FoundReport.lost_report_id == lost_report_id,
@@ -99,9 +100,11 @@ class FoundReportRepository:
                 FoundReport.deleted_at.is_(None),
             )
         )
-        for report in result.scalars():
+        rejected = list(result.scalars())
+        for report in rejected:
             report.status = FoundReportStatus.REJECTED
         await self.db.flush()
+        return rejected
 
     async def soft_delete(self, report: FoundReport) -> None:
         from datetime import datetime, timezone

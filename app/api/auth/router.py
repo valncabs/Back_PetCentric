@@ -10,7 +10,8 @@ from app.schemas.auth.register import RegisterRequest
 from app.schemas.auth.verify_email import ResendVerificationRequest, VerifyEmailRequest
 from app.services.auth import AuthService
 from app.utils.response import success_response
-
+from app.schemas.auth.delete_account import DeleteAccountRequest
+from app.schemas.auth.me import MeResponse
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
@@ -71,3 +72,21 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
 async def change_password(payload: ChangePasswordRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     await AuthService(db).change_password(current_user.id, payload.current_password, payload.new_password)
     return success_response(message="Contraseña actualizada correctamente.")
+
+@router.get("/me")
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    data = await AuthService(db).me(current_user)
+    return success_response(data=data, message="Sesión vigente.")
+
+
+@router.delete("/me")
+async def delete_my_account(
+    payload: DeleteAccountRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await AuthService(db).delete_account(current_user.id, payload.password)
+    return success_response(message="Cuenta eliminada correctamente.")

@@ -2,7 +2,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, Boolean, Enum as SAEnum
+from sqlalchemy import DateTime, ForeignKey, String, Text, Boolean, Enum as SAEnum, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -23,6 +23,16 @@ class Notification(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    lost_report_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("lost_reports.id", ondelete="SET NULL"),
+        nullable=True,
     )
     title: Mapped[str] = mapped_column(String(150), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
@@ -59,12 +69,18 @@ class Conversation(Base):
 
 class ConversationParticipant(Base):
     __tablename__ = "conversation_participants"
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "user_id", name="uq_conversation_participant"),
+    )
 
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     conversation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), primary_key=True
+        UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -82,11 +98,12 @@ class Message(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
     )
-    sender_id: Mapped[uuid.UUID] = mapped_column(
+    sender_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    body: Mapped[str | None] = mapped_column(Text, nullable=True)
-    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

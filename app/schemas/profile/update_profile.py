@@ -42,6 +42,19 @@ class UpdateProfileRequest(BaseModel):
             raise ValueError("La longitud debe estar entre -180 y 180.")
         return value
 
+    @field_validator("birth_date")
+    @classmethod
+    def check_birth_date(cls, value: date | None) -> date | None:
+        if value is None:
+            return value
+        today = date.today()
+        if value > today:
+            raise ValueError("La fecha de nacimiento no puede ser en el futuro.")
+        age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+        if age < 15:
+            raise ValueError("Debes tener al menos 15 años para registrarte.")
+        return value
+
 
 class UpdateProfileResponse(ProfileResponse):
     pass

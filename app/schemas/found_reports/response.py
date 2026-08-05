@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from pydantic import BaseModel
 
 from app.models.enums import FoundReportStatus
@@ -18,6 +19,8 @@ class FoundReportResponse(BaseModel):
     department: str
     city: str
     address: str | None = None
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
     approved_by: str | None = None
     approved_at: datetime | None = None
     published_at: datetime
@@ -31,5 +34,7 @@ class FoundReportListItem(BaseModel):
     title: str
     status: FoundReportStatus
     city: str
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
     found_date: date
     published_at: datetime

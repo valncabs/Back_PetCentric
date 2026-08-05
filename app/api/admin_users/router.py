@@ -56,3 +56,12 @@ async def update_user_status(
 async def create_admin_user(payload: CreateAdminRequest, db: AsyncSession = Depends(get_db)):
     data = await AdminUserService(db).create_admin(payload.model_dump())
     return success_response(data=data, message="Administrador creado correctamente.", status_code=201)
+
+
+@router.delete("/{user_id}", dependencies=[Depends(require_permission("users.delete"))])
+async def delete_user(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    await AdminUserService(db).delete_user(user_id)
+    return success_response(message="Usuario eliminado correctamente.")

@@ -40,5 +40,7 @@ class LostReportListItem(BaseModel):
     title: str
     status: LostReportStatus
     city: str
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
     lost_date: date
     published_at: datetime

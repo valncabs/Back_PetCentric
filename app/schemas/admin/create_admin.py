@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.enums import DocumentType
+from app.utils.validators import validate_password_strength
 
 
 class CreateAdminRequest(BaseModel):
@@ -14,3 +15,8 @@ class CreateAdminRequest(BaseModel):
     country: str
     department: str
     city: str
+
+    @field_validator("password")
+    @classmethod
+    def _validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)

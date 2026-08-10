@@ -19,6 +19,15 @@ class UserProfileRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_user_ids(self, user_ids: list[UUID]) -> dict[UUID, UserProfile]:
+        """Perfiles de varios usuarios en una sola consulta (evita N+1)."""
+        if not user_ids:
+            return {}
+        result = await self.db.execute(
+            select(UserProfile).where(UserProfile.user_id.in_(user_ids))
+        )
+        return {profile.user_id: profile for profile in result.scalars().all()}
+
     async def exists_for_user(self, user_id: UUID) -> bool:
         """
         Verificación mínima de existencia (sin cargar la entidad completa).

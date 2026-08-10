@@ -21,7 +21,8 @@ class ConnectionManager:
         self._lock = asyncio.Lock()
 
     async def connect(self, user_id: str, websocket: WebSocket) -> None:
-        await websocket.accept()
+        # El accept() ya lo hace el router (necesario para el handshake de
+        # autenticación por primer mensaje). Aquí solo se registra el socket.
         async with self._lock:
             self._connections.setdefault(user_id, set()).add(websocket)
             self._viewing.setdefault(user_id, {})[websocket] = None

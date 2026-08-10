@@ -1,16 +1,21 @@
 from typing import Any
 from uuid import UUID
+import logging
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestException, ConflictException, NotFoundException
 from app.core.security import hash_password
+from app.models.auth import Role, UserRole
 from app.models.user import User, UserProfile
 from app.repositories.permission_repository import PermissionRepository
 from app.repositories.rol_repository import RoleRepository
 from app.repositories.user import UserRepository
 from app.repositories.user_rol_repository import UserRoleRepository
 from app.utils.pagination import PaginationParams, paginate
+
+_log = logging.getLogger(__name__)
 
 
 class AdminUserService:
@@ -35,7 +40,13 @@ class AdminUserService:
         permissions = await self.permission_repo.get_effective_codes_for_user(user.id)
         return self._to_detail(user, sorted(permissions))
 
-    async def update_role(self, user_id: UUID, role_name: str) -> dict:
+    async def update_role(self, actor_id: UUID, user_id: UUID, role_name: str) -> dict:
+        if user_id == actor_id:
+            raise BadRequestException(
+                "No puedes cambiar tu propio rol.",
+                errors={"role": ["No puedes modificar tu propio rol."]},
+            )
+
         user = await self._get_full_or_404(user_id)
 
         role = await self.role_repo.get_by_name(role_name)
@@ -45,23 +56,50 @@ class AdminUserService:
                 errors={"role": [f"'{role_name}' no es un rol válido."]},
             )
 
+        current_is_admin = any(ur.role.name == "ADMIN" for ur in user.user_roles)
+        if current_is_admin and role_name != "ADMIN":
+            if await self._is_last_active_admin(user_id):
+                raise BadRequestException(
+                    "No puedes quitar el rol de administrador al último admin del sistema.",
+                    errors={"role": ["El sistema debe conservar al menos un administrador."]},
+                )
+
         await self.user_role_repo.remove_all_for_user(user.id)
         await self.user_role_repo.assign_role(user.id, role.id)
         await self.db.commit()
+        _log.info("Rol actualizado: actor=%s user=%s rol=%s", actor_id, user_id, role_name)
 
         return await self.get_user_detail(user_id)
 
-    async def update_status(self, user_id: UUID, is_active: bool) -> dict:
-        user = await self.user_repo.get_by_id(user_id)
-        if user is None:
-            raise NotFoundException("Usuario no encontrado.")
+    async def update_status(self, actor_id: UUID, user_id: UUID, is_active: bool) -> dict:
+        if user_id == actor_id:
+            raise BadRequestException(
+                "No puedes desactivar tu propia cuenta.",
+                errors={"is_active": ["No puedes desactivar tu propia cuenta."]},
+            )
+
+        user = await self._get_full_or_404(user_id)
+
+        if not is_active:
+            current_is_admin = any(ur.role.name == "ADMIN" for ur in user.user_roles)
+            if current_is_admin and await self._is_last_active_admin(user_id):
+                raise BadRequestException(
+                    "No puedes desactivar al último administrador del sistema.",
+                    errors={"is_active": ["El sistema debe conservar al menos un administrador."]},
+                )
 
         await self.user_repo.set_active(user, is_active)
         await self.db.commit()
+        _log.info(
+            "Estado de usuario actualizado: actor=%s user=%s is_active=%s",
+            actor_id,
+            user_id,
+            is_active,
+        )
 
         return await self.get_user_detail(user_id)
 
-    async def create_admin(self, data: dict[str, Any]) -> dict:
+    async def create_admin(self, data: dict[str, Any], actor_id: UUID) -> dict:
         existing = await self.user_repo.get_by_email(data["email"])
         if existing is not None:
             raise ConflictException(
@@ -93,6 +131,7 @@ class AdminUserService:
 
         await self.user_role_repo.assign_role(user.id, role.id)
         await self.db.commit()
+        _log.info("Admin creado: actor=%s nuevo=%s email=%s", actor_id, user.id, user.email)
 
         return await self.get_user_detail(user.id)
 
@@ -150,10 +189,34 @@ class AdminUserService:
             ),
         }
 
-    async def delete_user(self, user_id: UUID) -> None:
-        user = await self.user_repo.get_by_id(user_id)
-        if user is None:
-            raise NotFoundException("Usuario no encontrado.")
+    async def delete_user(self, actor_id: UUID, user_id: UUID) -> None:
+        if user_id == actor_id:
+            raise BadRequestException("No puedes eliminar tu propia cuenta.")
+
+        user = await self._get_full_or_404(user_id)
+
+        current_is_admin = any(ur.role.name == "ADMIN" for ur in user.user_roles)
+        if current_is_admin and await self._is_last_active_admin(user_id):
+            raise BadRequestException(
+                "No puedes eliminar al último administrador del sistema."
+            )
 
         await self.user_repo.soft_delete(user)
         await self.db.commit()
+        _log.warning("Usuario eliminado: actor=%s user=%s email=%s", actor_id, user_id, user.email)
+
+    async def _is_last_active_admin(self, user_id: UUID) -> bool:
+        """True si el usuario es el último ADMIN activo (no borrado) del sistema."""
+        count = await self.db.execute(
+            select(func.count(UserRole.user_id))
+            .join(Role, Role.id == UserRole.role_id)
+            .join(User, User.id == UserRole.user_id)
+            .where(
+                Role.name == "ADMIN",
+                Role.is_active.is_(True),
+                User.is_active.is_(True),
+                User.deleted_at.is_(None),
+                UserRole.user_id != user_id,
+            )
+        )
+        return count.scalar_one() == 0

@@ -34,3 +34,17 @@ class NotFoundException(AppException):
 class ConflictException(AppException):
     status_code = 409
     message = "Conflict"
+
+
+class TooManyRequestsException(AppException):
+    status_code = 429
+    message = "Too Many Requests"
+
+    def __init__(
+        self,
+        message: str | None = None,
+        errors: dict[str, Any] | None = None,
+        retry_after: int | None = None,
+    ) -> None:
+        super().__init__(message, errors)
+        self.retry_after = retry_after

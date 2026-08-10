@@ -28,4 +28,10 @@ async def get_current_user(
     user = await UserRepository(db).get_by_id(UUID(payload["sub"]))
     if user is None or not user.is_active:
         raise UnauthorizedException("Usuario no encontrado o inactivo.")
+
+    # La versión de token se incrementa al cambiar la contraseña: si el JWT
+    # lleva una versión distinta, fue emitido antes del cambio y se rechaza.
+    if payload.get("ver") is None or payload.get("ver") != user.token_version:
+        raise UnauthorizedException("Tu sesión fue invalidada. Inicia sesión de nuevo.")
+
     return user

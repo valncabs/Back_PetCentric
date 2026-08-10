@@ -32,6 +32,12 @@ class MessageRepository:
             Message.deleted_at.is_(None),
         )
 
+    def base_query_present(self, conversation_ids: list[UUID]) -> Select:
+        return select(Message).where(
+            Message.conversation_id.in_(conversation_ids),
+            Message.deleted_at.is_(None),
+        )
+
     async def list_by_conversation(
         self, conversation_id: UUID, offset: int, limit: int
     ) -> list[Message]:
@@ -64,6 +70,43 @@ class MessageRepository:
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+    async def last_messages(self, conversation_ids: list[UUID]) -> dict[UUID, Message]:
+        """Último mensaje de cada conversación en una sola consulta (DISTINCT ON).
+        Devuelve {conversation_id: message}. Evita el N+1 del listado."""
+        if not conversation_ids:
+            return {}
+        stmt = (
+            self.base_query_present(conversation_ids)
+            .order_by(
+                Message.conversation_id,
+                Message.created_at.desc(),
+                Message.id.desc(),
+            )
+            .distinct(Message.conversation_id)
+        )
+        result = await self.db.execute(stmt)
+        return {message.conversation_id: message for message in result.scalars().all()}
+
+    async def unread_counts(
+        self, conversation_ids: list[UUID], user_id: UUID
+    ) -> dict[UUID, int]:
+        """No leídos de cada conversación en una sola consulta agrupada.
+        Devuelve {conversation_id: count}."""
+        if not conversation_ids:
+            return {}
+        stmt = (
+            select(Message.conversation_id, func.count())
+            .where(
+                Message.conversation_id.in_(conversation_ids),
+                Message.sender_user_id != user_id,
+                Message.is_read.is_(False),
+                Message.deleted_at.is_(None),
+            )
+            .group_by(Message.conversation_id)
+        )
+        result = await self.db.execute(stmt)
+        return {conversation_id: count for conversation_id, count in result.all()}
 
     async def unread_count(self, conversation_id: UUID, user_id: UUID) -> int:
         stmt = (

@@ -1,4 +1,5 @@
 from uuid import UUID
+import logging
 
 from anyio import to_thread
 from fastapi import UploadFile
@@ -12,6 +13,30 @@ from app.utils.cloudinary_client import delete_image as cloudinary_delete, uploa
 
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+CHUNK_SIZE = 64 * 1024  # 64 KB
+
+_MAGIC_JPG = b"\xff\xd8\xff"
+_MAGIC_PNG = b"\x89PNG\r\n\x1a\n"
+_MAGIC_WEBP_RIFF = b"RIFF"
+_MAGIC_WEBP_ID = b"WEBP"
+
+_log = logging.getLogger(__name__)
+
+
+def _detect_image_mime(content: bytes) -> str | None:
+    """Detecta el tipo real de imagen por sus magic bytes. Ignora por completo
+    el content-type que manda el cliente, que es fácil de falsificar."""
+    if content.startswith(_MAGIC_JPG):
+        return "image/jpeg"
+    if content.startswith(_MAGIC_PNG):
+        return "image/png"
+    if (
+        len(content) >= 12
+        and content.startswith(_MAGIC_WEBP_RIFF)
+        and content[8:12] == _MAGIC_WEBP_ID
+    ):
+        return "image/webp"
+    return None
 
 
 class ImageService:
@@ -30,8 +55,8 @@ class ImageService:
         file: UploadFile,
         set_as_primary: bool = False,
     ) -> dict:
-        content = await file.read()
-        self._validate_file(file.content_type, len(content))
+        content = await self._read_limited(file)
+        mime_type = self._validate_file(content)
 
         folder = f"pet-centric/{entity_type.value.lower()}/{entity_id}"
         result = await to_thread.run_sync(cloudinary_upload, content, folder)
@@ -44,12 +69,20 @@ class ImageService:
             entity_id=entity_id,
             file_name=result["public_id"],
             file_path=result["secure_url"],
-            mime_type=file.content_type,
+            mime_type=mime_type,
             file_size=len(content),
             is_primary=set_as_primary,
             uploaded_by=uploaded_by,
         )
         await self.db.commit()
+        _log.info(
+            "Imagen subida: entity=%s entity_id=%s image_id=%s mime=%s bytes=%d",
+            entity_type.value,
+            entity_id,
+            image.id,
+            mime_type,
+            len(content),
+        )
         return self._to_dict(image)
 
     async def list_for_entity(self, entity_type: ImageEntityType, entity_id: UUID) -> list[dict]:
@@ -64,18 +97,45 @@ class ImageService:
         await to_thread.run_sync(cloudinary_delete, image.file_name)
         await self.image_repo.delete(image)
         await self.db.commit()
+        _log.info("Imagen eliminada: image_id=%s entity=%s entity_id=%s", image_id, entity_type.value, entity_id)
 
-    def _validate_file(self, content_type: str | None, size: int) -> None:
-        if content_type not in ALLOWED_MIME_TYPES:
+    async def _read_limited(self, file: UploadFile) -> bytes:
+        """Lee el archivo por chunks y aborta en cuanto se supera el límite de
+        tamaño, sin llegar a bufferizar el archivo completo en memoria."""
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = await file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > MAX_FILE_SIZE_BYTES:
+                raise BadRequestException(
+                    "El archivo es demasiado grande.",
+                    errors={"file": ["El tamaño máximo permitido es 5MB."]},
+                )
+            chunks.append(chunk)
+        return b"".join(chunks)
+
+    def _validate_file(self, content: bytes) -> str:
+        """Valida el contenido real por magic bytes y devuelve el MIME detectado."""
+        if not content:
+            raise BadRequestException(
+                "El archivo está vacío.",
+                errors={"file": ["El archivo no puede estar vacío."]},
+            )
+        mime_type = _detect_image_mime(content)
+        if mime_type is None or mime_type not in ALLOWED_MIME_TYPES:
             raise BadRequestException(
                 "Formato de imagen no soportado.",
-                errors={"file": ["Solo se permiten imágenes JPEG, PNG o WEBP."]},
+                errors={"file": ["Solo se permiten imágenes JPEG, PNG o WEBP reales."]},
             )
-        if size > MAX_FILE_SIZE_BYTES:
+        if len(content) > MAX_FILE_SIZE_BYTES:
             raise BadRequestException(
                 "El archivo es demasiado grande.",
                 errors={"file": ["El tamaño máximo permitido es 5MB."]},
             )
+        return mime_type
 
     @staticmethod
     def _to_dict(image: Image) -> dict:

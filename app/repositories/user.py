@@ -33,14 +33,27 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_role_names(self, user_id: UUID) -> list[str]:
+        """Nombres de rol de un usuario, sin cargar el User completo.
+        Usado por AuthService.me para no re-consultar toda la entidad."""
+        result = await self.db.execute(
+            select(Role.name)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(UserRole.user_id == user_id)
+        )
+        return list(result.scalars().all())
+
     async def get_by_id(self, user_id: UUID) -> User | None:
         result = await self.db.execute(
             select(User).where(User.id == user_id, User.deleted_at.is_(None))
         )
         return result.scalar_one_or_none()
 
-    async def create(self, email: str, password_hash: str) -> User:
-        user = User(email=email, password_hash=password_hash, email_verified=False)
+    async def create(self, email: str, password_hash: str, email_verified: bool = False) -> User:
+        """Firma extendida: register usa email_verified=False (por defecto);
+        create_admin lo marca True directamente, sin pasar por el flujo de
+        verificación por correo."""
+        user = User(email=email, password_hash=password_hash, email_verified=email_verified)
         self.db.add(user)
         await self.db.flush()
         await self.db.refresh(user)
@@ -57,15 +70,6 @@ class UserRepository:
     async def update_last_login(self, user: User) -> None:
         user.last_login = datetime.now(timezone.utc)
         await self.db.flush()
-
-    async def create(self, email: str, password_hash: str, email_verified: bool = False) -> User:
-        """Firma extendida: create_admin necesita marcar email_verified=True
-        directamente, sin pasar por el flujo de verificación por correo."""
-        user = User(email=email, password_hash=password_hash, email_verified=email_verified)
-        self.db.add(user)
-        await self.db.flush()
-        await self.db.refresh(user)
-        return user
 
     async def get_by_id_full(self, user_id: UUID) -> User | None:
         """Versión con eager-load de perfil y roles, para el detalle admin
@@ -112,6 +116,11 @@ class UserRepository:
 
     async def set_active(self, user: User, is_active: bool) -> None:
         user.is_active = is_active
+        await self.db.flush()
+
+    async def bump_token_version(self, user: User) -> None:
+        """Invalida los access tokens vigentes del usuario."""
+        user.token_version += 1
         await self.db.flush()
 
     async def soft_delete(self, user: User) -> None:

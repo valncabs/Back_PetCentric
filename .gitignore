@@ -45,3 +45,6 @@ Thumbs.db
 DB.txt
 estructura.txt
 tree.txt
+
+# Llaves JWT (nunca al repositorio)
+keys/

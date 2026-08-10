@@ -59,9 +59,56 @@ class ConversationService:
 
     async def list_mine(self, user_id: UUID) -> list[dict]:
         conversations = await self.conversation_repo.list_for_user(user_id)
+        if not conversations:
+            return []
+
+        # Cargar en bloque los datos de TODAS las conversaciones (evita N+1):
+        # perfiles, fotos, último mensaje y no leídos se resuelven con 4 queries.
+        other_by_conversation: dict[UUID, User] = {}
+        other_ids: list[UUID] = []
+        for conversation in conversations:
+            participants = [
+                p for p in conversation.participants if p.user_id != user_id
+            ]
+            if participants:
+                other = participants[0].user
+                other_by_conversation[conversation.id] = other
+                other_ids.append(other.id)
+
+        unique_other_ids = list(dict.fromkeys(other_ids))
+        conversation_ids = [c.id for c in conversations]
+
+        profiles = await self.profile_repo.get_by_user_ids(unique_other_ids)
+        images = await self.image_repo.list_by_entities(
+            ImageEntityType.USER_PROFILE, unique_other_ids
+        )
+        last_messages = await self.message_repo.last_messages(conversation_ids)
+        unread_counts = await self.message_repo.unread_counts(conversation_ids, user_id)
+
         items = []
         for conversation in conversations:
-            items.append(await self._build_conversation(conversation, user_id))
+            other = other_by_conversation.get(conversation.id)
+            last_message = last_messages.get(conversation.id)
+            unread = unread_counts.get(conversation.id, 0)
+            participant = None
+            if other is not None:
+                participant = self._user_public_dict_loaded(
+                    other,
+                    profiles.get(other.id),
+                    images.get(other.id, []),
+                )
+            items.append(
+                {
+                    "id": str(conversation.id),
+                    "participant": participant,
+                    "last_message": (
+                        self._message_dict(last_message) if last_message else None
+                    ),
+                    "unread_count": unread,
+                    "created_at": iso_datetime(conversation.created_at),
+                    "updated_at": iso_datetime(conversation.updated_at),
+                }
+            )
         return items
 
     async def get_conversation(self, conversation_id: UUID, user_id: UUID) -> dict:
@@ -93,16 +140,23 @@ class ConversationService:
 
     async def _user_public_dict(self, user: User) -> dict:
         profile = await self.profile_repo.get_by_user_id(user.id)
+        images = await self.image_repo.list_by_entity(ImageEntityType.USER_PROFILE, user.id)
+        return self._user_public_dict_loaded(user, profile, images)
+
+    @staticmethod
+    def _user_public_dict_loaded(
+        user: User, profile, images: list
+    ) -> dict:
+        """Construye el dict del participante a partir de datos ya cargados
+        (evita re-consultar perfil/foto en listados)."""
         full_name = None
         if profile:
             full_name = f"{profile.first_name} {profile.last_name}".strip()
 
         photo_url = None
-        if profile:
-            images = await self.image_repo.list_by_entity(ImageEntityType.USER_PROFILE, user.id)
-            if images:
-                primary = next((img for img in images if img.is_primary), images[0])
-                photo_url = primary.file_path
+        if images:
+            primary = next((img for img in images if img.is_primary), images[0])
+            photo_url = primary.file_path
 
         return {
             "id": str(user.id),

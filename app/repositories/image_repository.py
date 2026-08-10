@@ -19,6 +19,23 @@ class ImageRepository:
         )
         return list(result.scalars().all())
 
+    async def list_by_entities(
+        self, entity_type: ImageEntityType, entity_ids: list[UUID]
+    ) -> dict[UUID, list[Image]]:
+        """Imágenes de varias entidades en una sola consulta (evita N+1).
+        Devuelve {entity_id: [imágenes ordenadas]}."""
+        if not entity_ids:
+            return {}
+        result = await self.db.execute(
+            select(Image)
+            .where(Image.entity_type == entity_type, Image.entity_id.in_(entity_ids))
+            .order_by(Image.is_primary.desc(), Image.created_at.asc())
+        )
+        grouped: dict[UUID, list[Image]] = {}
+        for image in result.scalars():
+            grouped.setdefault(image.entity_id, []).append(image)
+        return grouped
+
     async def get_by_id(self, image_id: UUID) -> Image | None:
         return await self.db.get(Image, image_id)
 

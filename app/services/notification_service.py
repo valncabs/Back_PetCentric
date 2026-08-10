@@ -17,11 +17,14 @@ class NotificationService:
     async def list_mine(self, user_id: UUID, page: int, page_size: int) -> dict:
         offset = (page - 1) * page_size
         notifications = await self.notification_repo.list_by_user(user_id, offset, page_size)
+        total = await self.notification_repo.count_for_user(user_id)
+        pages = (total + page_size - 1) // page_size if total > 0 else 0
         return {
             "items": [self._to_dict(n) for n in notifications],
             "page": page,
             "page_size": page_size,
-            "total": len(notifications),
+            "total": total,
+            "pages": pages,
         }
 
     async def unread_count(self, user_id: UUID) -> int:

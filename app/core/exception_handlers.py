@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+import logging
 
 from app.core.exceptions import AppException
+
+_log = logging.getLogger(__name__)
 
 
 def _format_pydantic_errors(exc: RequestValidationError) -> dict[str, list[str]]:
@@ -19,9 +22,13 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+        headers = {}
+        if getattr(exc, "retry_after", None) is not None:
+            headers["Retry-After"] = str(exc.retry_after)
         return JSONResponse(
             status_code=exc.status_code,
             content={"success": False, "message": exc.message, "errors": exc.errors},
+            headers=headers or None,
         )
 
     @app.exception_handler(RequestValidationError)
@@ -33,6 +40,9 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        _log.exception(
+            "Excepción no controlada: %s %s", request.method, request.url.path
+        )
         return JSONResponse(
             status_code=500,
             content={"success": False, "message": "Internal Server Error", "errors": {}},

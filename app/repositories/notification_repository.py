@@ -49,6 +49,14 @@ class NotificationRepository:
         )
         return list(result.scalars().all())
 
+    async def count_for_user(self, user_id: UUID) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(Notification)
+            .where(Notification.user_id == user_id)
+        )
+        return int((await self.db.execute(stmt)).scalar_one() or 0)
+
     async def count_unread(self, user_id: UUID) -> int:
         stmt = (
             select(func.count())

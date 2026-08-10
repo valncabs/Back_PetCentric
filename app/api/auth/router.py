@@ -1,6 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.auth.token import LogoutRequest, RefreshTokenRequest
+from app.core.config import settings
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -12,6 +13,7 @@ from app.services.auth import AuthService
 from app.utils.response import success_response
 from app.schemas.auth.delete_account import DeleteAccountRequest
 from app.schemas.auth.me import MeResponse
+from app.utils.rate_limit import rate_limiter, rate_limit_ip
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
@@ -27,14 +29,24 @@ async def verify_email(payload: VerifyEmailRequest, db: AsyncSession = Depends(g
     return success_response(message="Correo verificado correctamente.")
 
 
-@router.post("/resend-verification")
+@router.post("/resend-verification", dependencies=[Depends(rate_limit_ip("resend-verification", settings.RESEND_VERIFICATION_RATE_LIMIT_MAX, settings.RESEND_VERIFICATION_RATE_LIMIT_WINDOW_SECONDS))])
 async def resend_verification(payload: ResendVerificationRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    await rate_limiter.check(
+        f"resend-verification:email:{payload.email.strip().lower()}",
+        settings.RESEND_VERIFICATION_RATE_LIMIT_MAX,
+        settings.RESEND_VERIFICATION_RATE_LIMIT_WINDOW_SECONDS,
+    )
     await AuthService(db).resend_verification(payload.email, background_tasks)
     return success_response(message="Si el correo existe y no ha sido verificado, se envió un nuevo enlace.")
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit_ip("login", settings.LOGIN_RATE_LIMIT_MAX, settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS))])
 async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    await rate_limiter.check(
+        f"login:email:{payload.email.strip().lower()}",
+        settings.LOGIN_RATE_LIMIT_MAX,
+        settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+    )
     data = await AuthService(db).login(
         payload.email,
         payload.password,
@@ -56,8 +68,13 @@ async def logout(payload: LogoutRequest, db: AsyncSession = Depends(get_db)):
     return success_response(message="Sesión cerrada correctamente.")
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(rate_limit_ip("forgot-password", settings.FORGOT_PASSWORD_RATE_LIMIT_MAX, settings.FORGOT_PASSWORD_RATE_LIMIT_WINDOW_SECONDS))])
 async def forgot_password(payload: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    await rate_limiter.check(
+        f"forgot-password:email:{payload.email.strip().lower()}",
+        settings.FORGOT_PASSWORD_RATE_LIMIT_MAX,
+        settings.FORGOT_PASSWORD_RATE_LIMIT_WINDOW_SECONDS,
+    )
     await AuthService(db).forgot_password(payload.email, background_tasks)
     return success_response(message="Si el correo existe, se envió un enlace para restablecer la contraseña.")
 

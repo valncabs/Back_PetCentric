@@ -36,10 +36,9 @@ def _cors_origins() -> list[str]:
 
 
 def _api_docs_enabled() -> bool:
-    """La documentación (/docs, /redoc, /openapi.json) solo se expone en
-    entornos de desarrollo; en producción se desactiva para no divulgar la
-    superficie completa de la API."""
-    return settings.APP_ENV.lower() == "development"
+    """La documentación (/docs, /redoc, /openapi.json) se expone en todos los
+    entornos, incluida producción."""
+    return True
 
 app = FastAPI(
     title=settings.APP_NAME,

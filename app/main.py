@@ -17,6 +17,7 @@ from app.api.admin_users.router import router as admin_users_router
 from app.api.admin_reports.router import router as admin_reports_router
 from app.api.messaging.router import router as messaging_router
 from app.api.notifications.router import router as notifications_router
+from app.api.chat.router import router as chat_router
 
 setup_logging()
 _log = logging.getLogger("app.access")
@@ -100,3 +101,4 @@ app.include_router(admin_users_router)
 app.include_router(admin_reports_router)
 app.include_router(messaging_router)
 app.include_router(notifications_router)
+app.include_router(chat_router)

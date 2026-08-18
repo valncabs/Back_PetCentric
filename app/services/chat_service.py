@@ -31,16 +31,6 @@ class ChatService:
         self.proxy_key = settings.AI_TOOL_PROXY_KEY
         self._tools_cache: list[dict] | None = None
 
-        if not self.proxy_url.startswith(("http://", "https://")):
-            _log.error(
-                "AI_TOOL_PROXY_URL no empieza con http(s)://: '%s'",
-                settings.AI_TOOL_PROXY_URL,
-            )
-            raise AiBridgeException(
-                "La URL del proxy de herramientas (AI_TOOL_PROXY_URL) "
-                "no empieza con http:// o https://."
-            )
-
     async def ask(self, question: str) -> ChatResponse:
         if not settings.GROQ_API_KEY:
             raise AiBridgeException("GROQ_API_KEY no está configurada en el backend.")
@@ -60,24 +50,11 @@ class ChatService:
                     "tools": tools,
                     "tool_choice": "auto",
                 }
-                try:
-                    response = await client.post(
-                        self.groq_url,
-                        headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
-                        json=payload,
-                    )
-                except httpx.TimeoutException:
-                    _log.error("Groq no respondió a tiempo (%s)", self.groq_url)
-                    raise AiBridgeException(
-                        "El proveedor de IA tardó demasiado en responder."
-                    )
-                except httpx.HTTPError as e:
-                    _log.error(
-                        "No se pudo conectar con Groq en %s: %s", self.groq_url, e
-                    )
-                    raise AiBridgeException(
-                        f"No se pudo conectar con el proveedor de IA: {e}"
-                    )
+                response = await client.post(
+                    self.groq_url,
+                    headers={"Authorization": f"Bearer {settings.GROQ_API_KEY}"},
+                    json=payload,
+                )
                 if response.status_code >= 400:
                     _log.error(
                         "Groq respondió %s: %s", response.status_code, response.text[:500]
@@ -121,26 +98,7 @@ class ChatService:
         headers = (
             {"Authorization": f"Bearer {self.proxy_key}"} if self.proxy_key else None
         )
-        try:
-            response = await client.get(f"{self.proxy_url}/openapi.json", headers=headers)
-        except httpx.TimeoutException:
-            _log.error(
-                "Timeout al obtener el spec del proxy de herramientas en %s",
-                self.proxy_url,
-            )
-            raise AiBridgeException(
-                "El proxy de herramientas (mcpo) no respondió a tiempo."
-            )
-        except httpx.HTTPError as e:
-            _log.error(
-                "No se pudo conectar con el proxy de herramientas en %s: %s",
-                self.proxy_url,
-                e,
-            )
-            raise AiBridgeException(
-                f"No se pudo conectar con el proxy de herramientas en "
-                f"{self.proxy_url}: {e}. Ejecuta ./iniciar.sh en asistente-bd."
-            )
+        response = await client.get(f"{self.proxy_url}/openapi.json", headers=headers)
         if response.status_code >= 400:
             _log.error(
                 "No se pudo obtener el spec del proxy: %s %s",
@@ -197,30 +155,11 @@ class ChatService:
             {"Authorization": f"Bearer {self.proxy_key}"} if self.proxy_key else None
         )
         body = arguments or {}
-        try:
-            response = await client.post(
-                f"{self.proxy_url}/{name}",
-                json=body,
-                headers=headers,
-            )
-        except httpx.TimeoutException:
-            _log.error(
-                "Timeout al llamar a la herramienta %s en %s", name, self.proxy_url
-            )
-            raise AiBridgeException(
-                f"La herramienta {name} tardó demasiado en responder."
-            )
-        except httpx.HTTPError as e:
-            _log.error(
-                "No se pudo conectar con la herramienta %s en %s: %s",
-                name,
-                self.proxy_url,
-                e,
-            )
-            raise AiBridgeException(
-                f"No se pudo conectar con la herramienta {name} en "
-                f"{self.proxy_url}: {e}"
-            )
+        response = await client.post(
+            f"{self.proxy_url}/{name}",
+            json=body,
+            headers=headers,
+        )
         if response.status_code >= 400:
             _log.error(
                 "Tool %s respondió %s: %s",

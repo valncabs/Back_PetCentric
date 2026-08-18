@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 import logging
 import time
 
@@ -19,21 +18,9 @@ from app.api.admin_reports.router import router as admin_reports_router
 from app.api.messaging.router import router as messaging_router
 from app.api.notifications.router import router as notifications_router
 from app.api.chat.router import router as chat_router
-from app.services.proxy_registry import load_persisted_proxy_url
 
 setup_logging()
 _log = logging.getLogger("app.access")
-
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    # La URL del proxy de herramientas (quick tunnel de cloudflared) es efímera;
-    # recupera la última reportada por iniciar.sh para sobrevivir a los redeploys.
-    try:
-        await load_persisted_proxy_url()
-    except Exception:
-        _log.exception("No se pudo cargar la URL del proxy persistida al arrancar.")
-    yield
 
 
 def _cors_origins() -> list[str]:
@@ -60,7 +47,6 @@ app = FastAPI(
     docs_url="/docs" if _api_docs_enabled() else None,
     redoc_url="/redoc" if _api_docs_enabled() else None,
     openapi_url="/openapi.json" if _api_docs_enabled() else None,
-    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -72,7 +58,6 @@ app.add_middleware(
         "Authorization",
         "Content-Type",
         "X-Requested-With",
-        "X-Proxy-Key",
         "Accept",
         "Origin",
     ],

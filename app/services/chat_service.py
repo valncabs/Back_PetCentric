@@ -6,7 +6,6 @@ import httpx
 from app.core.config import settings
 from app.core.exceptions import AiBridgeException
 from app.schemas.chat.chat import ChatResponse, ChatSource
-from app.services.proxy_registry import get_proxy_url
 
 _log = logging.getLogger(__name__)
 
@@ -28,14 +27,14 @@ class ChatService:
     def __init__(self) -> None:
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = settings.GROQ_MODEL
-        self.proxy_url = get_proxy_url()
+        self.proxy_url = settings.AI_TOOL_PROXY_URL.rstrip("/")
         self.proxy_key = settings.AI_TOOL_PROXY_KEY
         self._tools_cache: list[dict] | None = None
 
         if not self.proxy_url.startswith(("http://", "https://")):
             _log.error(
-                "La URL del proxy de herramientas no empieza con http(s)://: '%s'",
-                self.proxy_url,
+                "AI_TOOL_PROXY_URL no empieza con http(s)://: '%s'",
+                settings.AI_TOOL_PROXY_URL,
             )
             raise AiBridgeException(
                 "La URL del proxy de herramientas (AI_TOOL_PROXY_URL) "

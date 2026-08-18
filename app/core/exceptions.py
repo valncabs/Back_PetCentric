@@ -48,8 +48,3 @@ class TooManyRequestsException(AppException):
     ) -> None:
         super().__init__(message, errors)
         self.retry_after = retry_after
-
-
-class AiBridgeException(AppException):
-    status_code = 502
-    message = "El asistente IA no está disponible en este momento."

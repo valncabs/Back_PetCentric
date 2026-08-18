@@ -51,14 +51,6 @@ class Settings(BaseSettings):
     # Frontend
     FRONTEND_URL: str
 
-    # Asistente IA (function-calling sobre herramientas de base de datos)
-    # Llave de Groq y modelo usado para redactar la respuesta.
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "openai/gpt-oss-120b"
-    # Proxy REST de herramientas (mcpo): base URL y API key opcional.
-    AI_TOOL_PROXY_URL: str = "http://127.0.0.1:8000"
-    AI_TOOL_PROXY_KEY: str = ""
-
     # CORS: lista de orígenes permitidos separados por coma.
     # Si está vacío, se usa FRONTEND_URL como único origen.
     CORS_ALLOWED_ORIGINS: str = ""
